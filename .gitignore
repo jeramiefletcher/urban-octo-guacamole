@@ -6,3 +6,4 @@ dist/
 ve/
 *.pyc
 __pycache__/
+*.pypirc
