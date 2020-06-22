@@ -1,16 +1,14 @@
-from datetime import timedelta, date, datetime
+from datetime import timedelta, datetime
 import re
 
-__version__ = '0.20200523'
-printVersion = 'version: {}'
-print(printVersion.format(__version__))
+from workingdays._version import version as __version__
 
 
 def dateCleanup(datevalue, **kwargs):
     '''
     FUNCTION: dateCleanup
 
-    ARGUMENT: datevalue (optionial ecpoch keyword arg, default is False)
+    ARGUMENT: datevalue (optionial epoch keyword arg, default is False)
         "datevalue" expected to be Type string unless epoch=True,
         Then datevalue expected to be Type Int
 
@@ -157,12 +155,14 @@ def dateCleanup(datevalue, **kwargs):
     return cleanupdate
 
 
-def workday(datevalue, offset):
+def workday(datevalue, offset, holidays=[]):
     # -------------------------------------------------------------------------
     # Workday Function
     # -------------------------------------------------------------------------
-    # pass the datelist values to the "date" fuction
+    # pass datevalue to the "dateCleanup" fuction
     startdate = dateCleanup(str(datevalue)).date()
+    # pass all holidays to "dateCleanup" function
+    holidays = [dateCleanup(str(dates)).date() for dates in holidays]
     i = 0
     workdays = startdate
     # -------------------------------------------------------------------------
@@ -170,9 +170,16 @@ def workday(datevalue, offset):
     # -------------------------------------------------------------------------
     while i < offset:
         # ---------------------------------------------------------------------
+        # holiday
+        # ---------------------------------------------------------------------
+        if workdays + timedelta(days=1) in holidays:
+            workdays += timedelta(days=1)
+            # holidays don't count for offset, so add 1
+            offset += 1
+        # ---------------------------------------------------------------------
         # weekday
         # ---------------------------------------------------------------------
-        if workdays.isoweekday() < 5 or workdays.isoweekday() == 7:
+        elif workdays.isoweekday() < 5 or workdays.isoweekday() == 7:
             workdays += timedelta(days=1)
         # ---------------------------------------------------------------------
         # weekend
@@ -186,11 +193,14 @@ def workday(datevalue, offset):
     return workdays.strftime("%Y%m%d")
 
 
-def workdayStart(datevalue, offset):
+def workdayStart(datevalue, offset, holidays=[]):
     # -------------------------------------------------------------------------
     # WorkdayStart Function
     # -------------------------------------------------------------------------
+    # pass datevalue to the "dateCleanup" fuction
     startdate = dateCleanup(str(datevalue)).date()
+    # pass all holidays to "dateCleanup" function
+    holidays = [dateCleanup(str(dates)).date() for dates in holidays]
     i = 0
     workdaystart = startdate
     # -------------------------------------------------------------------------
@@ -198,9 +208,16 @@ def workdayStart(datevalue, offset):
     # -------------------------------------------------------------------------
     while i < offset:
         # ---------------------------------------------------------------------
+        # holiday
+        # ---------------------------------------------------------------------
+        if workdaystart - timedelta(days=1) in holidays:
+            workdaystart -= timedelta(days=1)
+            # holidays don't count for offset, so add 1
+            offset += 1
+        # ---------------------------------------------------------------------
         # weekday
         # ---------------------------------------------------------------------
-        if 1 < workdaystart.isoweekday() < 7:
+        elif 1 < workdaystart.isoweekday() < 7:
             workdaystart -= timedelta(days=1)
         # ---------------------------------------------------------------------
         # weekend
@@ -214,21 +231,30 @@ def workdayStart(datevalue, offset):
     return workdaystart.strftime("%Y%m%d")
 
 
-def compareWorkingdays(datevalue, comparedate):
+def compareWorkingdays(datevalue, comparedate, holidays=[]):
     # -------------------------------------------------------------------------
     # Compare Workday Function
     # -------------------------------------------------------------------------
+    # pass datevalue to the "dateCleanup" fuction
     startdate = dateCleanup(str(datevalue)).date()
     comparedate = dateCleanup(str(comparedate)).date()
+    # pass all holidays to "dateCleanup" function
+    holidays = [dateCleanup(str(dates)).date() for dates in holidays]
     i = 0
     # -------------------------------------------------------------------------
     # iterate through offset to return working days
     # -------------------------------------------------------------------------
     while startdate < comparedate:
         # ---------------------------------------------------------------------
+        # holiday
+        # ---------------------------------------------------------------------
+        if startdate in holidays:
+            # holidays don't count for offset, so skip updating "i"
+            startdate += timedelta(days=1)
+        # ---------------------------------------------------------------------
         # weekday
         # ---------------------------------------------------------------------
-        if startdate.isoweekday() <= 5:
+        elif startdate.isoweekday() <= 5:
             startdate += timedelta(days=1)
             i += 1
         # ---------------------------------------------------------------------
@@ -242,20 +268,28 @@ def compareWorkingdays(datevalue, comparedate):
     return networkdays
 
 
-def lastWorkdayofMonth(datevalue):
+def lastWorkdayofMonth(datevalue, holidays=[]):
     # -------------------------------------------------------------------------
     # Last Workday of Month Function
     # -------------------------------------------------------------------------
     startdate = dateCleanup(str(datevalue)).date()
+    # pass all holidays to "dateCleanup" function
+    holidays = [dateCleanup(str(dates)).date() for dates in holidays]
     nextmonth = startdate.replace(day=28) + \
         timedelta(days=4)  # this will never fail
     lastworkday = nextmonth - timedelta(days=nextmonth.day)
+    # -------------------------------------------------------------------------
+    # holiday
+    # -------------------------------------------------------------------------
+    if lastworkday in holidays:
+        while lastworkday in holidays:
+            lastworkday -= timedelta(days=1)
     # -------------------------------------------------------------------------
     # If lastworkday is a weekend then move to Friday
     # -------------------------------------------------------------------------
     # Saturday (subtract 1 day)
     # -------------------------------------------------------------------------
-    if lastworkday.isoweekday() == 6:
+    elif lastworkday.isoweekday() == 6:
         lastworkday -= timedelta(days=1)
     # -------------------------------------------------------------------------
     # Sunday (subtract 2 days)
@@ -266,7 +300,7 @@ def lastWorkdayofMonth(datevalue):
     return lastworkday.strftime("%Y%m%d")
 
 
-def lastWorkdayofQtr(datevalue, **kwargs):
+def lastWorkdayofQtr(datevalue, holidays=[], **kwargs):
     '''
     FUNCTION: lastWorkdayofQtr
 
@@ -335,6 +369,8 @@ def lastWorkdayofQtr(datevalue, **kwargs):
     # -------------------------------------------------------------------------
     startdate = dateCleanup(str(datevalue)).date()
     startdate = startdate.replace(day=28)
+    # pass all holidays to "dateCleanup" function
+    holidays = [dateCleanup(str(dates)).date() for dates in holidays]
     monthNumber = ''
     items = ''
     # -------------------------------------------------------------------------
@@ -416,11 +452,17 @@ def lastWorkdayofQtr(datevalue, **kwargs):
     nextmonth = startdate + timedelta(days=4)  # this will never fail
     lastworkday = nextmonth - timedelta(days=nextmonth.day)
     # -------------------------------------------------------------------------
+    # holiday
+    # -------------------------------------------------------------------------
+    if lastworkday in holidays:
+        while lastworkday in holidays:
+            lastworkday -= timedelta(days=1)
+    # -------------------------------------------------------------------------
     # If lastworkday of qtr is a weekend then move to Friday
     # -------------------------------------------------------------------------
     # Saturday (subtract 1 day)
     # -------------------------------------------------------------------------
-    if lastworkday.isoweekday() == 6:
+    elif lastworkday.isoweekday() == 6:
         lastworkday -= timedelta(days=1)
     # -------------------------------------------------------------------------
     # Sunday (subtract 2 days)
