@@ -1,2 +1,2 @@
 # workday
-python module of functions centered around workday calculations
+python package of date functions/utilities centered around workday calculations
