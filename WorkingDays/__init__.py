@@ -1,5 +1,6 @@
 """
-    A Python package containing a collection of date utilities/helper functions.
+    A Python package containing a collection of date utilities/helper
+    functions.
 
 IMPORTED FUNCTIONS:
     re
