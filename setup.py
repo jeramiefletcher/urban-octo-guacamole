@@ -26,5 +26,7 @@ setuptools.setup(
     url="https://github.com/jeramiefletcher/workingdays",
     license="GNU General Public License v3.0",
     packages=setuptools.find_packages(),
+    install_requires=['workingdays',
+                      ],
     include_package_data=True,
     zip_safe=False)

@@ -9,7 +9,7 @@ def dateCleanup(datevalue, **kwargs):
     FUNCTION: dateCleanup
 
     ARGUMENT: datevalue (optionial epoch keyword arg, default is False)
-        "datevalue" expected to be Type string unless epoch=True,
+        "datevalue" is expected to be Type string unless epoch=True,
         Then datevalue expected to be Type Int
 
     DESCRIPTION:
@@ -144,9 +144,13 @@ def dateCleanup(datevalue, **kwargs):
             # datevalue has no separators (string of numbers)
             # -----------------------------------------------------------------
             elif len(datelist) == 1:
+                datevalue = datevalue.ljust(14, '0')
                 y = int(datevalue[0:4])
                 m = int(datevalue[4:6])
                 d = int(datevalue[6:8])
+                h = int(datevalue[8:10])
+                M = int(datevalue[10:12])
+                s = int(datevalue[12:14])
         # ---------------------------------------------------------------------
         # pass the datelist values to the "date" fuction
         # ---------------------------------------------------------------------

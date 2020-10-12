@@ -4,7 +4,7 @@ from workingdays import date_utilities as wd
 from _test_setup import printVersion
 
 # set test case version
-__version__ = '0.20200622'
+__version__ = '201012'
 
 
 def main():
@@ -64,7 +64,12 @@ class DateCleanupTests(unittest.TestCase):
 
     def test_DateString(self):
         self.assertEqual(wd.dateCleanup
-                         ('20200205000000').strftime("%Y%m%d%H%M%S"),
+                         ('20200205110000').strftime("%Y%m%d%H%M%S"),
+                         '20200205110000')
+
+    def test_DateString_Ymd(self):
+        self.assertEqual(wd.dateCleanup
+                         ('20200205').strftime("%Y%m%d%H%M%S"),
                          '20200205000000')
 
 
