@@ -28,7 +28,7 @@ __all__ = ['workingdays', '_version']
 
 def main():
     printVersion = 'version: {}'
-    return print(printVersion.format(__version__))
+    print(printVersion.format(__version__))
 
 
 if __name__ == "__main__":
