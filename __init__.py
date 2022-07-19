@@ -1,1 +1,1 @@
-from workingdays import __version__
+from .WorkingDays._version import version as __version__

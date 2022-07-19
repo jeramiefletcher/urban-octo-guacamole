@@ -1,19 +1,28 @@
 from datetime import timedelta, datetime
 import re
+import logging
 
-from workingdays._version import version as __version__
+from WorkingDays._version import version as __version__
+
+logs = logging.getLogger(__name__)
 
 
 def dateCleanup(datevalue, **kwargs):
-    '''
+    """
     FUNCTION: dateCleanup
-
-    ARGUMENT: datevalue (optionial epoch keyword arg, default is False)
-        "datevalue" is expected to be Type string unless epoch=True,
-        Then datevalue expected to be Type Int
 
     DESCRIPTION:
         Returns datetime.datetime(y, m, d, h, M, s) of "datevalue".
+
+    ARGUMENT:
+        # ----------------------------------------------------------------------------------
+        # ARGUMENTS          | TYPES              | DESCRIPTION
+        # ----------------------------------------------------------------------------------
+        # datevalue          | string/int         | Date for working days.
+        # **optional epoch   | boolean            | Default = False
+
+        "datevalue" is expected to be Type string unless epoch=True,
+        Then datevalue expected to be Type Int.
 
     EXAMPLES:
         # ---------------------------------------------------------------------
@@ -31,9 +40,9 @@ def dateCleanup(datevalue, **kwargs):
         # ---------------------------------------------------------------------
         >>> dateCleanup('2020-02-28 12:30:00')
         datetime.datetime(2020, 2, 28, 12, 30)
-    '''
+    """
     # -------------------------------------------------------------------------
-    # Set the Varaibles
+    # Set the Variables
     # -------------------------------------------------------------------------
     datelist = []
     epoch = False
@@ -41,7 +50,7 @@ def dateCleanup(datevalue, **kwargs):
     # check if epoch
     # -------------------------------------------------------------------------
     for key, value in kwargs.items():
-        if key == 'epoch':
+        if key == "epoch":
             epoch = value
     # -------------------------------------------------------------------------
     # set datevalue
@@ -56,10 +65,9 @@ def dateCleanup(datevalue, **kwargs):
         # ---------------------------------------------------------------------
         # German date formats
         # Referencing https://en.wikipedia.org/wiki/Date_format_by_country
-        # The format dd.mm.yyyy using dots (which denote ordinal numbering).
+        # The format dd.mm.yyyy using dots (which denotes ordinal numbering).
         # ---------------------------------------------------------------------
-        germanDateFormat = re.match(r'([0-9]{2}\.[0-9]{2}\.[0-9]{4})',
-                                    datevalue)
+        germanDateFormat = re.match(r"([0-9]{2}\.[0-9]{2}\.[0-9]{4})", datevalue)
         if germanDateFormat:
             datelist = re.findall(r"[\w':\w':\w']+", datevalue)
             d = int(datelist[0])
@@ -70,9 +78,9 @@ def dateCleanup(datevalue, **kwargs):
             s = 0
             for value in datelist:
                 # -------------------------------------------------------------
-                # checking for Time patterns
+                # checking for time patterns
                 # -------------------------------------------------------------
-                if re.match(r'([0-9]{2}:[0-9]{2}:[0-9])', value):
+                if re.match(r"([0-9]{2}:[0-9]{2}:[0-9])", value):
                     h = int(value[0:2])
                     M = int(value[3:5])
                     s = int(value[6:8])
@@ -83,14 +91,16 @@ def dateCleanup(datevalue, **kwargs):
             # or
             # when pattern like 'YYYY:MM:DDhh:mm:ss' to 'YYYY-MM-DD hh:mm:ss'
             # -----------------------------------------------------------------
-            datevalue = re.sub(r'\W', '-',
-                               re.sub
-                               (r'(?<=[0-9]{4}\W[0-9]{2}\W[0-9]{2})(?=[^\s])',
-                                r' ', datevalue), count=2)
+            datevalue = re.sub(
+                r"\W",
+                "-",
+                re.sub(r"(?<=[0-9]{4}\W[0-9]{2}\W[0-9]{2})(?=[^\s:])", r" ", datevalue),
+                count=2,
+            )
             # -----------------------------------------------------------------
             # Splitting patterns into a list
             # -----------------------------------------------------------------
-            datelist = re.findall(r"[\w':\w':\w']+", datevalue)
+            datelist = re.findall(r"[\w':\w':\w.\w']+", datevalue)
             # -----------------------------------------------------------------
             # datevalue has separators (list of numbers)
             # -----------------------------------------------------------------
@@ -107,17 +117,25 @@ def dateCleanup(datevalue, **kwargs):
                     # example: Jan to 1 or March to 3
                     # ---------------------------------------------------------
                     if value.isalpha() is True:
-                        m = int(datetime.strptime(value[0:3].capitalize(),
-                                                  '%b').month)
+                        m = int(datetime.strptime(value[0:3].capitalize(), "%b").month)
+                    # ---------------------------------------------------------
+                    # checking for ISO 8601 Time patterns
+                    # ---------------------------------------------------------
+                    elif re.match(r"([a-zA-Z][0-9]{2}:.)", value):
+                        h = int(value[1:3])
+                        M = int(value[4:6])
+                        s = int(value[7:9])
                     # ---------------------------------------------------------
                     # checking for Time patterns
                     # ---------------------------------------------------------
-                    elif re.match(r'([0-9]{2}:[0-9]{2}:[0-9])', value):
+                    elif re.match(r"([0-9]{2}:[0-9]{2}:[0-9])", value):
                         h = int(value[0:2])
                         M = int(value[3:5])
                         s = int(value[6:8])
+                    # ---------------------------------------------------------
                     # UTC Timezone Format
-                    elif re.match(r'(\w[0-9]{2}:[0-9]{2}:[0-9]{2}\w)', value):
+                    # ---------------------------------------------------------
+                    elif re.match(r"(\w[0-9]{2}:[0-9]{2}:[0-9]{2}\w)", value):
                         h = int(value[1:3])
                         M = int(value[4:6])
                         s = int(value[7:9])
@@ -129,11 +147,11 @@ def dateCleanup(datevalue, **kwargs):
                     # ---------------------------------------------------------
                     # checking for Day patterns
                     # ---------------------------------------------------------
-                    elif int(value) > 12 < 31:
+                    elif int(value) > 12 and int(value) <= 31:
                         d = int(value)
                     # ---------------------------------------------------------
                     # checking if the value is <= 12, either Month or Day so if
-                    # Month is not allready defined (by alpha pattern) set it
+                    # Month is not all ready defined (by alpha pattern) set it
                     # ---------------------------------------------------------
                     elif int(value) <= 12:
                         if m != 0:
@@ -144,7 +162,7 @@ def dateCleanup(datevalue, **kwargs):
             # datevalue has no separators (string of numbers)
             # -----------------------------------------------------------------
             elif len(datelist) == 1:
-                datevalue = datevalue.ljust(14, '0')
+                datevalue = datevalue.ljust(14, "0")
                 y = int(datevalue[0:4])
                 m = int(datevalue[4:6])
                 d = int(datevalue[6:8])
@@ -152,20 +170,51 @@ def dateCleanup(datevalue, **kwargs):
                 M = int(datevalue[10:12])
                 s = int(datevalue[12:14])
         # ---------------------------------------------------------------------
-        # pass the datelist values to the "date" fuction
+        # pass the datelist values to the "date" function
         # ---------------------------------------------------------------------
-        if datevalue != '':
+        try:
             cleanupdate = datetime(y, m, d, h, M, s)
+        except Exception as e:
+            raise Exception(
+                "The error raised is: {0}. y = {1}, m = {2}, d = {3}, datevalue = {4}".format(
+                    e, y, m, d, datevalue
+                )
+            )
     return cleanupdate
 
 
 def workday(datevalue, offset, holidays=[]):
+    """
+    FUNCTION: workday
+
+    ARGUMENTS:
+        # ----------------------------------------------------------------------------------
+        # ARGUMENTS          | TYPES          | DESCRIPTION
+        # ----------------------------------------------------------------------------------
+        # datevalue          | string         | Date for working days.
+        # offset             | int            | Number of business days from datevalue.
+        # holidays           | list           | Optional holidays to skip for workdays.
+        # ----------------------------------------------------------------------------------
+
+    RETURNS:
+        workdays.strftime("%Y%m%d")
+
+    EXAMPLES:
+        # ----------------------------------------------------------------------------------
+        # calculate the date for a 7 workday offset
+        # ----------------------------------------------------------------------------------
+        >>> start = workday('20210801', 7)
+        "20210810"
+    """
     # -------------------------------------------------------------------------
     # Workday Function
     # -------------------------------------------------------------------------
-    # pass datevalue to the "dateCleanup" fuction
+    # pass datevalue to the "dateCleanup" function
+    # -------------------------------------------------------------------------
     startdate = dateCleanup(str(datevalue)).date()
+    # -------------------------------------------------------------------------
     # pass all holidays to "dateCleanup" function
+    # -------------------------------------------------------------------------
     holidays = [dateCleanup(str(dates)).date() for dates in holidays]
     i = 0
     workdays = startdate
@@ -178,7 +227,9 @@ def workday(datevalue, offset, holidays=[]):
         # ---------------------------------------------------------------------
         if workdays + timedelta(days=1) in holidays:
             workdays += timedelta(days=1)
+            # -----------------------------------------------------------------
             # holidays don't count for offset, so add 1
+            # -----------------------------------------------------------------
             offset += 1
         # ---------------------------------------------------------------------
         # weekday
@@ -190,20 +241,92 @@ def workday(datevalue, offset, holidays=[]):
         # ---------------------------------------------------------------------
         else:
             workdays += timedelta(days=1)
+            # -----------------------------------------------------------------
             # weekends don't count for offset, so add 1
+            # -----------------------------------------------------------------
             offset += 1
         i += 1
-    # -------------------------------------------------------------------------
     return workdays.strftime("%Y%m%d")
 
 
+def calendarDay(datevalue, offset):
+    """
+    FUNCTION: workday
+
+    ARGUMENTS:
+        # ----------------------------------------------------------------------------------
+        # ARGUMENTS          | TYPES          | DESCRIPTION
+        # ----------------------------------------------------------------------------------
+        # datevalue          | string         | Date for calendar days.
+        # offset             | int            | Number of business days from datevalue.
+        # ----------------------------------------------------------------------------------
+
+    RETURNS:
+        caldays.strftime("%Y%m%d")
+
+    EXAMPLES:
+        # ----------------------------------------------------------------------------------
+        # calculate the date for a 7 calendar day offset
+        # ----------------------------------------------------------------------------------
+        >>> start = calendarDay('20210801', 7)
+        "20210810"
+    """
+    # -------------------------------------------------------------------------
+    # calendarDay Function
+    # -------------------------------------------------------------------------
+    # pass datevalue to the "dateCleanup" function
+    # -------------------------------------------------------------------------
+    startdate = dateCleanup(str(datevalue)).date()
+    # -------------------------------------------------------------------------
+    i = 0
+    caldays = startdate
+    # -------------------------------------------------------------------------
+    # iterate through offset to return calendar days
+    # -------------------------------------------------------------------------
+    while i < offset:
+        # ---------------------------------------------------------------------
+        # weekday
+        # ---------------------------------------------------------------------
+        caldays += timedelta(days=1)
+        i += 1
+    return caldays.strftime("%Y%m%d")
+
+
 def workdayStart(datevalue, offset, holidays=[]):
+    """
+    FUNCTION: workdayStart
+
+    DESCRIPTION:
+        calculate the "workdayStart" based off the datevalue - offset (in business days)
+
+    ARGUMENTS:
+        # ----------------------------------------------------------------------------------
+        # ARGUMENTS          | TYPES          | DESCRIPTION
+        # ----------------------------------------------------------------------------------
+        # datevalue          | string         | Date to calculate the workdayStart from.
+        # offset             | int            | Number of business days from datevalue.
+        # holidays           | list           | Optional holidays to skip for workdays.
+        # ----------------------------------------------------------------------------------
+
+    RETURNS:
+        workdays.strftime("%Y%m%d")
+
+    EXAMPLES:
+        # ----------------------------------------------------------------------------------
+        # calculate the start date based off a 7 day offset (in business days)
+        # ----------------------------------------------------------------------------------
+        >>> start = workday('20210801', 7)
+        "20210722"
+    """
     # -------------------------------------------------------------------------
     # WorkdayStart Function
     # -------------------------------------------------------------------------
-    # pass datevalue to the "dateCleanup" fuction
+    # pass datevalue to the "dateCleanup" function
+    # -------------------------------------------------------------------------
     startdate = dateCleanup(str(datevalue)).date()
+    # -------------------------------------------------------------------------
     # pass all holidays to "dateCleanup" function
+    # -------------------------------------------------------------------------
     holidays = [dateCleanup(str(dates)).date() for dates in holidays]
     i = 0
     workdaystart = startdate
@@ -216,7 +339,9 @@ def workdayStart(datevalue, offset, holidays=[]):
         # ---------------------------------------------------------------------
         if workdaystart - timedelta(days=1) in holidays:
             workdaystart -= timedelta(days=1)
+            # -----------------------------------------------------------------
             # holidays don't count for offset, so add 1
+            # -----------------------------------------------------------------
             offset += 1
         # ---------------------------------------------------------------------
         # weekday
@@ -228,21 +353,24 @@ def workdayStart(datevalue, offset, holidays=[]):
         # ---------------------------------------------------------------------
         else:
             workdaystart -= timedelta(days=1)
+            # -----------------------------------------------------------------
             # weekends don't count for offset, so add 1
+            # -----------------------------------------------------------------
             offset += 1
         i += 1
-    # -------------------------------------------------------------------------
     return workdaystart.strftime("%Y%m%d")
 
 
-def compareWorkingdays(datevalue, comparedate, holidays=[]):
+def compareWorkingDays(datevalue, comparedate, holidays=[]):
     # -------------------------------------------------------------------------
     # Compare Workday Function
     # -------------------------------------------------------------------------
-    # pass datevalue to the "dateCleanup" fuction
+    # pass datevalue to the "dateCleanup" function
     startdate = dateCleanup(str(datevalue)).date()
     comparedate = dateCleanup(str(comparedate)).date()
+    # -------------------------------------------------------------------------
     # pass all holidays to "dateCleanup" function
+    # -------------------------------------------------------------------------
     holidays = [dateCleanup(str(dates)).date() for dates in holidays]
     i = 0
     # -------------------------------------------------------------------------
@@ -265,22 +393,24 @@ def compareWorkingdays(datevalue, comparedate, holidays=[]):
         # weekend
         # ---------------------------------------------------------------------
         else:
+            # -----------------------------------------------------------------
             # weekends don't count for offset, so skip updating "i"
+            # -----------------------------------------------------------------
             startdate += timedelta(days=1)
     networkdays = i
-    # -------------------------------------------------------------------------
     return networkdays
 
 
-def lastWorkdayofMonth(datevalue, holidays=[]):
+def lastWorkdayOfMonth(datevalue, holidays=[]):
     # -------------------------------------------------------------------------
     # Last Workday of Month Function
     # -------------------------------------------------------------------------
     startdate = dateCleanup(str(datevalue)).date()
+    # -------------------------------------------------------------------------
     # pass all holidays to "dateCleanup" function
+    # -------------------------------------------------------------------------
     holidays = [dateCleanup(str(dates)).date() for dates in holidays]
-    nextmonth = startdate.replace(day=28) + \
-        timedelta(days=4)  # this will never fail
+    nextmonth = startdate.replace(day=28) + timedelta(days=4)  # this will never fail
     lastworkday = nextmonth - timedelta(days=nextmonth.day)
     # -------------------------------------------------------------------------
     # holiday
@@ -300,17 +430,16 @@ def lastWorkdayofMonth(datevalue, holidays=[]):
     # -------------------------------------------------------------------------
     elif lastworkday.isoweekday() == 7:
         lastworkday -= timedelta(days=2)
-    # -------------------------------------------------------------------------
     return lastworkday.strftime("%Y%m%d")
 
 
-def lastWorkdayofQtr(datevalue, holidays=[], **kwargs):
-    '''
-    FUNCTION: lastWorkdayofQtr
+def lastWorkdayOfQtr(datevalue, holidays=[], **kwargs):
+    """
+    FUNCTION: lastWorkdayOfQtr
 
     DESCRIPTION:
         Returns last workday of Qtr for "datevalue" passed.
-        Default Qtrs are in "Calendar Years".
+        Default Qtr are in "Calendar Years".
         # ---------------------------------------------------------------------
         # Default Qtr list (Calendar Year)
         # ---------------------------------------------------------------------
@@ -325,13 +454,13 @@ def lastWorkdayofQtr(datevalue, holidays=[], **kwargs):
         Can be a list or dict.
 
     RETURNS:
-        datestring (%Y%m%d)
+        datestring(%Y%m%d)
 
     EXAMPLES:
         # ---------------------------------------------------------------------
         # List Example:
         # ---------------------------------------------------------------------
-        >>> lastWorkdayofQtr('20200213',Q1=["Nov", "Dec", "Jan"],
+        >>> lastWorkdayOfQtr('20200213',Q1=["Nov", "Dec", "Jan"],
                              Q2=["Feb", "Mar", "Apr"])
         '20200430'
         # ---------------------------------------------------------------------
@@ -341,18 +470,28 @@ def lastWorkdayofQtr(datevalue, holidays=[], **kwargs):
                         "Q2": ["Feb", "Mar", "Apr"],
                         "Q3": ["May", "Jun", "Jul"],
                         "Q4": ["Aug", "Sep", "Oct"]}
-        >>>lastWorkdayofQtr('20200213', key=quarters)
+        >>>lastWorkdayOfQtr('20200213', key=quarters)
         '20200430'
-    '''
+    """
     # -------------------------------------------------------------------------
     # checkQtrList
     # -------------------------------------------------------------------------
     def checkQtrList(listobj):
-        months = ['Jan', 'Feb', 'Mar',
-                  'Apr', 'May', 'Jun',
-                  'Jul', 'Aug', 'Sep',
-                  'Oct', 'Nov', 'Dec']
-        qtrcheck = ''
+        months = [
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec",
+        ]
+        qtrcheck = ""
         # ---------------------------------------------------------------------
         if (type(listobj) is list) is True:
             if len(listobj) == 3:
@@ -368,22 +507,25 @@ def lastWorkdayofQtr(datevalue, holidays=[], **kwargs):
             else:
                 qtrcheck = False
         return qtrcheck
+
     # -------------------------------------------------------------------------
     # Last Workday of Qtr Function
     # -------------------------------------------------------------------------
     startdate = dateCleanup(str(datevalue)).date()
     startdate = startdate.replace(day=28)
+    # -------------------------------------------------------------------------
     # pass all holidays to "dateCleanup" function
+    # -------------------------------------------------------------------------
     holidays = [dateCleanup(str(dates)).date() for dates in holidays]
-    monthNumber = ''
-    items = ''
+    monthNumber = ""
+    items = ""
     # -------------------------------------------------------------------------
     # Default Qtr list (Calendar Year)
     # -------------------------------------------------------------------------
-    Q1 = ['Jan', 'Feb', 'Mar']
-    Q2 = ['Apr', 'May', 'Jun']
-    Q3 = ['Jul', 'Aug', 'Sep']
-    Q4 = ['Oct', 'Nov', 'Dec']
+    Q1 = ["Jan", "Feb", "Mar"]
+    Q2 = ["Apr", "May", "Jun"]
+    Q3 = ["Jul", "Aug", "Sep"]
+    Q4 = ["Oct", "Nov", "Dec"]
     # -------------------------------------------------------------------------
     # Set the optional Quarter variables
     # -------------------------------------------------------------------------
@@ -396,28 +538,28 @@ def lastWorkdayofQtr(datevalue, holidays=[], **kwargs):
         # ---------------------------------------------------------------------
         # Setting Q1
         # ---------------------------------------------------------------------
-        if key == 'Q1':
+        if key == "Q1":
             qtrcheck = checkQtrList(value)
             if qtrcheck is True:
                 Q1 = value
         # ---------------------------------------------------------------------
         # Setting Q2
         # ---------------------------------------------------------------------
-        if key == 'Q2':
+        if key == "Q2":
             qtrcheck = checkQtrList(value)
             if qtrcheck is True:
                 Q2 = value
         # ---------------------------------------------------------------------
         # Setting Q3
         # ---------------------------------------------------------------------
-        if key == 'Q3':
+        if key == "Q3":
             qtrcheck = checkQtrList(value)
             if qtrcheck is True:
                 Q3 = value
         # ---------------------------------------------------------------------
         # Setting Q4
         # ---------------------------------------------------------------------
-        if key == 'Q4':
+        if key == "Q4":
             qtrcheck = checkQtrList(value)
             if qtrcheck is True:
                 Q4 = value
@@ -427,28 +569,30 @@ def lastWorkdayofQtr(datevalue, holidays=[], **kwargs):
     # Q1 cutoff
     # -------------------------------------------------------------------------
     if startdate.strftime("%b") in Q1:
-        monthNumber = datetime.strptime(Q1[2], '%b').month
+        monthNumber = datetime.strptime(Q1[2], "%b").month
+        # ---------------------------------------------------------------------
         # If month is in Nov or Dec, update year by 1
-        if startdate.strftime("%b") in ('Nov', 'Dec'):
+        # ---------------------------------------------------------------------
+        if startdate.strftime("%b") in ("Nov", "Dec"):
             startdate = startdate.replace(startdate.year + 1)
         startdate = startdate.replace(month=monthNumber)
     # -------------------------------------------------------------------------
     # Q2 cutoff
     # -------------------------------------------------------------------------
     elif startdate.strftime("%b") in Q2:
-        monthNumber = datetime.strptime(Q2[2], '%b').month
+        monthNumber = datetime.strptime(Q2[2], "%b").month
         startdate = startdate.replace(month=monthNumber)
     # -------------------------------------------------------------------------
     # Q3 cutoff
     # -------------------------------------------------------------------------
     elif startdate.strftime("%b") in Q3:
-        monthNumber = datetime.strptime(Q3[2], '%b').month
+        monthNumber = datetime.strptime(Q3[2], "%b").month
         startdate = startdate.replace(month=monthNumber)
     # -------------------------------------------------------------------------
     # Q4 cutoff
     # -------------------------------------------------------------------------
     elif startdate.strftime("%b") in Q4:
-        monthNumber = datetime.strptime(Q4[2], '%b').month
+        monthNumber = datetime.strptime(Q4[2], "%b").month
         startdate = startdate.replace(month=monthNumber)
     # -------------------------------------------------------------------------
     # Set last day of qtr
@@ -473,24 +617,21 @@ def lastWorkdayofQtr(datevalue, holidays=[], **kwargs):
     # -------------------------------------------------------------------------
     elif lastworkday.isoweekday() == 7:
         lastworkday -= timedelta(days=2)
-    # -------------------------------------------------------------------------
     return lastworkday.strftime("%Y%m%d")
 
 
-def lastDayofMonth(datevalue):
+def lastDayOfMonth(datevalue):
     # -------------------------------------------------------------------------
     # Last day of Month Function
     # -------------------------------------------------------------------------
     startdate = dateCleanup(str(datevalue)).date()
-    nextmonth = startdate.replace(day=28) + \
-        timedelta(days=4)  # this will never fail
+    nextmonth = startdate.replace(day=28) + timedelta(days=4)  # this will never fail
     nextmonth = nextmonth - timedelta(days=nextmonth.day)
-    # -------------------------------------------------------------------------
     return nextmonth.strftime("%Y%m%d")
 
 
 def setSortValue(str):
-    global sortvalue    # Needed to modify global copy of SortValue
+    global sortvalue  # Needed to modify global copy of SortValue
     sortvalue = str
 
 
@@ -498,7 +639,103 @@ def dateSort(DictObj):
     try:
         return DictObj[sortvalue]
     except BaseException as msg:
-        warn = 'Please pass Global "sortvalue" in function ' + \
-            '"setSortValue()" first: {}'
+        warn = (
+            'Please pass Global "sortvalue" in function ' + '"setSortValue()" first: {}'
+        )
         print(warn.format(msg))
-        print('Please pass sortvalue in setSortValue(str) function first.')
+        print("Please pass sortvalue in setSortValue(str) function first.")
+
+
+def dateBucketing(startDT, interval, endDT=datetime.utcnow().strftime("%Y%m%d")):
+    """
+    FUNCTION: dateBucketing
+
+    ARGUMENTS:
+        # ----------------------------------------------------------------------------------
+        # ARGUMENTS          | TYPES             | DESCRIPTION
+        # ----------------------------------------------------------------------------------
+        # startDT            | string            | start date for bucket range.
+        # interval           | string            | days between start and end dates.
+        # endDT              | string            | end date of bucket range. Default utcnow.
+        # ----------------------------------------------------------------------------------
+
+    RETURNS:
+        date_list[(startDT, endDT)]
+
+    EXAMPLES:
+        # ----------------------------------------------------------------------------------
+        # run dateBucketing for weekly groups starting 08012021 to utcnow()
+        # ----------------------------------------------------------------------------------
+        >>> start = "20210801"
+        >>> bucket = dateBucketing( start, 6)
+        >>> for x, res in enumerate(bucket):
+        >>>     print(x, ":", res)
+        "0 : ("20210801", "20210807")"
+        "1 : ("20210808", "20210814")"
+        "2 : ("20210815", "20210821")"
+        "3 : ("20210822", "20210828")"
+        "4 : ("20210829", "20210830")"
+    """
+    # ----------------------------------------------------------------------------------
+    # set date_list & counters
+    # ----------------------------------------------------------------------------------
+    startDT = dateCleanup(startDT).strftime("%Y%m%d")
+    date_list = []
+    bucketStart = int(startDT)
+    endDT = int(dateCleanup(endDT).strftime("%Y%m%d"))
+    if bucketStart == int(datetime.utcnow().strftime("%Y%m%d")):
+        # ------------------------------------------------------------------------------
+        # set date_list if utcnow
+        # ------------------------------------------------------------------------------
+        logs.info("startDT is '{}'. Bucketing not required.".format(startDT))
+        dt_object = dateCleanup(startDT)
+        bucket = (
+            dt_object.strftime("%Y-%m-%d"),
+            datetime.utcnow().strftime("%Y-%m-%d"),
+        )
+        date_list.append(bucket)
+    else:
+        # ------------------------------------------------------------------------------
+        # loop through buckets
+        # ------------------------------------------------------------------------------
+        while bucketStart <= endDT:
+            # --------------------------------------------------------------------------
+            #  set start and end interval
+            # --------------------------------------------------------------------------
+            dt_object = dateCleanup(startDT)
+            dt_offset = dt_object + timedelta(days=interval)
+            # --------------------------------------------------------------------------
+            #  dt_offset is greater than endDT -> end on utcnow
+            # --------------------------------------------------------------------------
+            if int(dt_offset.strftime("%Y%m%d")) >= endDT:
+                logs.info(
+                    "Creating buckets of '{}' - '{}'.".format(
+                        dt_object.strftime("%Y-%m-%d"),
+                        dateCleanup(endDT).strftime("%Y-%m-%d"),
+                    )
+                )
+                bucket = (
+                    dt_object.strftime("%Y-%m-%d"),
+                    dateCleanup(endDT).strftime("%Y-%m-%d"),
+                )
+            # --------------------------------------------------------------------------
+            #  dt_offset is less than endDT -> end on dt_offset
+            # --------------------------------------------------------------------------
+            else:
+                logs.info(
+                    "Creating buckets of '{}' - '{}'.".format(
+                        dt_object.strftime("%Y-%m-%d"),
+                        dt_offset.strftime("%Y-%m-%d"),
+                    )
+                )
+                bucket = (
+                    dt_object.strftime("%Y-%m-%d"),
+                    dt_offset.strftime("%Y-%m-%d"),
+                )
+            # --------------------------------------------------------------------------
+            #  update date_list and counters
+            # --------------------------------------------------------------------------
+            date_list.append(bucket)
+            startDT = dt_offset + timedelta(days=1)
+            bucketStart = int(dateCleanup(startDT).strftime("%Y%m%d"))
+    return date_list

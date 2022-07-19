@@ -7,3 +7,4 @@ ve/
 *.pyc
 __pycache__/
 *.pypirc
+*.ini
